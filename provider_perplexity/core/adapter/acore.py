@@ -3,7 +3,7 @@ adaptercore 模块。
 
 本文件为 Provider-Evo 项目标准模块，使用以下约定：
 
-- 模块路径：provider-plugin.Provider-Perplexity-Adapter.provider_perplexity.core.adapter.adaptercore
+- 模块路径：provider-plugin.Provider-Perplexity-Adapter.provider_perplexity.core.adapter.acore
 - 文件名：adaptercore.py
 - 父包：provider-plugin/Provider-Perplexity-Adapter/provider_perplexity/core/adapter
 
@@ -41,11 +41,11 @@ from typing import Any, AsyncGenerator, Dict, List, Union
 
 import aiohttp
 
-from src.core.dispatch.candidate import Candidate
+from src.core.dispatch.cand import Candidate
 from src.foundation.logger import get_logger
 from provider_sdk.extensions.platform.adapter import PlatformAdapter
 from .client import PerplexityClient
-from ..constants import CAPS
+from ..consts import CAPS
 from ..catalog.models import MODELS
 
 logger = get_logger(__name__)

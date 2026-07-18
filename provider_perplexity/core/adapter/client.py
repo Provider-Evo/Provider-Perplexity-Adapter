@@ -6,12 +6,12 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiohttp
 
-from src.core.dispatch.candidate import Candidate, make_id
+from src.core.dispatch.cand import Candidate, make_id
 from src.foundation.logger import get_logger
-from ..constants import BASE_URL, CHAT_PATH
+from ..consts import BASE_URL, CHAT_PATH
 from ..headers import build_headers
 from ..catalog.models import MODELS
-from ..payloads import build_payload
+from ..payload import build_payload
 from ..stream.sse import parse_sse_line
 
 logger = get_logger(__name__)
@@ -112,6 +112,60 @@ class PerplexityClient:
         if last_exc is not None:
             raise last_exc
 
+    @staticmethod
+    def _build_request(
+        prompt: str, model: str
+    ) -> tuple[str, Dict[str, Any], Dict[str, Any]]:
+        """Build the request URL, headers and payload for a chat call.
+
+        Args:
+            prompt: The extracted user prompt.
+            model: The model name.
+
+        Returns:
+            A tuple of (url, headers, payload).
+        """
+        request_id = str(uuid.uuid4())
+        referer = f"{BASE_URL}/"
+        headers = build_headers("", referer=referer, request_id=request_id)
+
+        convo: Dict[str, Any] = {
+            "frontend_uid": str(uuid.uuid4()),
+            "frontend_context_uuid": str(uuid.uuid4()),
+            "last_backend_uuid": None,
+            "read_write_token": None,
+            "thread_url_slug": None,
+        }
+
+        payload = build_payload(prompt, model, followup=False, convo=convo)
+        url = f"{BASE_URL}{CHAT_PATH}"
+        return url, headers, payload
+
+    @staticmethod
+    async def _iter_sse_events(
+        resp: aiohttp.ClientResponse,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Iterate the SSE response body and yield parsed data items.
+
+        Args:
+            resp: The active HTTP response object.
+
+        Yields:
+            Parsed SSE data items.
+        """
+        async for line in resp.content:
+            if not line:
+                continue
+            text = line.decode("utf-8", errors="replace").strip()
+            if not text or not text.startswith("data:"):
+                continue
+            data_str = text[5:].strip()
+            if data_str == "[DONE]":
+                break
+            parsed = parse_sse_line(data_str)
+            if parsed is not None:
+                yield parsed
+
     async def _do_request(
         self,
         candidate: Candidate,
@@ -138,21 +192,7 @@ class PerplexityClient:
             raise RuntimeError("session not initialized")
 
         prompt = self._extract_prompt(messages)
-
-        request_id = str(uuid.uuid4())
-        referer = f"{BASE_URL}/"
-        headers = build_headers("", referer=referer, request_id=request_id)
-
-        convo: Dict[str, Any] = {
-            "frontend_uid": str(uuid.uuid4()),
-            "frontend_context_uuid": str(uuid.uuid4()),
-            "last_backend_uuid": None,
-            "read_write_token": None,
-            "thread_url_slug": None,
-        }
-
-        payload = build_payload(prompt, model, followup=False, convo=convo)
-        url = f"{BASE_URL}{CHAT_PATH}"
+        url, headers, payload = self._build_request(prompt, model)
 
         async with self._session.post(
             url,
@@ -166,18 +206,8 @@ class PerplexityClient:
                     f"perplexity HTTP {resp.status}: {await resp.text()}"
                 )
 
-            async for line in resp.content:
-                if not line:
-                    continue
-                text = line.decode("utf-8", errors="replace").strip()
-                if not text or not text.startswith("data:"):
-                    continue
-                data_str = text[5:].strip()
-                if data_str == "[DONE]":
-                    break
-                parsed = parse_sse_line(data_str)
-                if parsed is not None:
-                    yield parsed
+            async for parsed in self._iter_sse_events(resp):
+                yield parsed
 
     @staticmethod
     def _extract_prompt(messages: List[Dict[str, Any]]) -> str:

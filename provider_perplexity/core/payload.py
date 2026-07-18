@@ -3,7 +3,7 @@ payloads 模块。
 
 本文件为 Provider-Evo 项目标准模块，使用以下约定：
 
-- 模块路径：provider-plugin.Provider-Perplexity-Adapter.provider_perplexity.core.payloads
+- 模块路径：provider-plugin.Provider-Perplexity-Adapter.provider_perplexity.core.payload
 - 文件名：payloads.py
 - 父包：provider-plugin/Provider-Perplexity-Adapter/provider_perplexity/core
 
@@ -35,6 +35,8 @@ payloads 模块。
     - 保持单文件 200-400 行；超长请拆为子包并通过 ``__init__.py`` 重新导出。
     - 严禁放置 placeholder / 兜底 / 伪装通过的代码（见 ``AGENTS.md`` Hard Constraints）。
 """
+
+from __future__ import annotations
 
 from typing import Any, Dict
 

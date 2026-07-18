@@ -1,61 +1,40 @@
-"""headers 模块 — Provider 适配器层。
+"""constants 模块 — Provider 适配器层。
 
 职责：
-    集中放置 provider HTTP 请求头构造逻辑。
+    集中放置 provider 常量定义（模型名、URL 模板、错误码等）。
 
 本文件为 Provider-Evo 项目标准模块；保持单文件 200-400 行。
 修改指引参见文件末尾的"本模块对外契约"章节（共 20 条）。
 """
 
 
-from typing import Dict
+from typing import Dict, List
 
-from .consts import BASE_URL
+BASE_URL: str = "https://www.perplexity.ai"
+AUTH_ENDPOINT: str = f"{BASE_URL}/api/auth/session"
+CHAT_PATH: str = "/rest/sse/perplexity_ask"
 
-
-def build_headers(
-    token: str = "",
-    referer: str | None = None,
-    request_id: str | None = None,
-) -> Dict[str, str]:
-    """Build Perplexity HTTP request headers.
-
-    Args:
-        token: Bearer token (empty string for public access).
-        referer: Referer header value.
-        request_id: X-Request-ID header value.
-
-    Returns:
-        Dictionary of HTTP headers.
-    """
-    headers: Dict[str, str] = {
-        "accept": "text/event-stream",
-        "accept-language": "en-US,en;q=0.9",
-        "cache-control": "no-cache",
-        "content-type": "application/json",
-        "origin": BASE_URL,
-        "user-agent": (
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-        ),
-    }
-    if referer:
-        headers["referer"] = referer
-    if request_id:
-        headers["x-request-id"] = request_id
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    return headers
+CAPS: Dict[str, bool] = {
+    "chat": True,
+    "completions": True,
+    "thinking": True,
+    "search": True,
+}
 
 # =======================================================================
 # 重导出 — 同包内协同模块的公共符号（保持外部 ``from .. import`` 路径稳定）
 # =======================================================================
+
+from .headers import (
+    build_headers,
+)
 
 from .payload import (
     build_payload,
 )
 
 __all__ = [
+    "build_headers",
     "build_payload",
 ]
 
@@ -100,9 +79,14 @@ __all__ = [
 # 重导出 — 同包协同模块（保持外部 ``from .. import`` 路径稳定）
 # =======================================================================
 
+from .headers import (
+    build_headers,
+)
+
 from .payload import (
     build_payload,
 )
 __all__ = [
+    "build_headers",
     "build_payload",
 ]

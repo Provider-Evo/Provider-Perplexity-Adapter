@@ -6,6 +6,8 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import aiohttp
 
+from provider_sdk.model_ids import ModelIdRegistry
+
 from src.core.dispatch.cand import Candidate, make_id
 from src.foundation.logger import get_logger
 from ..consts import BASE_URL, CHAT_PATH
@@ -27,6 +29,9 @@ class PerplexityClient:
 
     def __init__(self) -> None:
         self._session: Optional[aiohttp.ClientSession] = None
+        self._model_registry = ModelIdRegistry("perplexity")
+        self._model_registry.load()
+        self._models: List[str] = self._model_registry.register_many(MODELS)
 
     async def init(self, session: aiohttp.ClientSession) -> None:
         """Initialize the client with an aiohttp session.
@@ -48,7 +53,7 @@ class PerplexityClient:
                 id=make_id("perplexity", "public"),
                 platform="perplexity",
                 resource_id="public",
-                models=MODELS,
+                models=self._models,
                 meta={},
                 chat=True,
                 tools=False,
@@ -94,6 +99,7 @@ class PerplexityClient:
         Yields:
             Text chunks or usage dicts from the SSE stream.
         """
+        model = self._model_registry.resolve_upstream(model)
         last_exc: Optional[Exception] = None
         for attempt in range(MAX_RETRIES + 1):
             if attempt > 0:
